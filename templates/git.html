@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GitHub Repositories</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap">
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            background-color: #f4f4f4;
+        }
+
+        #sidebar {
+            width: 100%;
+            background-color: #333;
+            color: #fff;
+            padding: 20px;
+            box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+        }
+
+        #sidebar h3 {
+            font-size: 1.5em;
+            margin-bottom: 20px;
+            font-weight: 500;
+        }
+
+        #sidebar select {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 20px;
+            background-color: #555;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+
+        #sidebar select:hover {
+            background-color: #666;
+        }
+
+        #sidebar option {
+            background-color: #555;
+        }
+
+        #content {
+            flex-grow: 1;
+            padding: 20px;
+        }
+
+        #reposList {
+            list-style: none;
+            padding: 0;
+        }
+
+        #reposList li {
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+
+        a {
+            color: #3498db;
+            text-decoration: none;
+            transition: color 0.3s ease-in-out;
+        }
+
+        a:hover {
+            color: #1f6fd5;
+        }
+
+        @media only screen and (max-width: 600px) {
+            #sidebar {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="sidebar">
+        <h3>Explore some of the projects I've worked on or are interested in here.</h3>
+        <select id="repoSelector">
+            <option value="" disabled selected>Loading...</option>
+        </select>
+    </div>
+
+    <div id="content">
+        <h1></h1>
+        <ul id="reposList"></ul>
+    </div>
+
+    <script>
+        const username = "momollax";
+        const apiUrl = `https://api.github.com/users/${username}/repos`;
+
+        async function fetchAndSortRepos() {
+          const response = await fetch(apiUrl);
+          const repos = await response.json();
+
+          return repos.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+        }
+
+        async function populateDropdown() {
+    const repoSelector = document.getElementById('repoSelector');
+    repoSelector.disabled = true; // Désactiver le sélecteur jusqu'à ce que les données soient chargées
+    const repos = await fetchAndSortRepos();
+    repoSelector.disabled = false; // Activer le sélecteur une fois les données chargées
+
+    repos.forEach(repo => {
+        const option = document.createElement('option');
+        option.value = repo.full_name;
+        option.text = repo.name;
+        repoSelector.appendChild(option);
+    });
+
+    const defaultRepo = repos[0];
+    repoSelector.value = defaultRepo.full_name;
+
+    const changeEvent = new Event('change');
+    repoSelector.dispatchEvent(changeEvent);
+
+    repoSelector.addEventListener('change', async () => {
+        const selectedRepo = repoSelector.value;
+        await displayRepoDetails(selectedRepo);
+    });
+}
+
+        async function displayRepoDetails(repoFullName) {
+    const reposList = document.getElementById('reposList');
+    const repos = await fetchAndSortRepos();
+
+    const selectedRepo = repos.find(repo => repo.full_name === repoFullName);
+
+    // Populate dropdown only when displaying repo details
+    const repoSelector = document.getElementById('repoSelector');
+    if (repoSelector.options.length === 1 && repoSelector.options[0].value === "") {
+        await populateDropdown();
+    }
+
+    reposList.innerHTML = `<h1>${selectedRepo.name} ${selectedRepo.fork ? '(Fork)' : ''}</h1>`;
+    reposList.innerHTML += `<li><strong>Stars:</strong> ${selectedRepo.stargazers_count}</li>`;
+    reposList.innerHTML += `<li><strong>Description:</strong> ${selectedRepo.description || 'N/A'}</li>`;
+    reposList.innerHTML += `<li><strong>URL:</strong> <a href="${selectedRepo.html_url}" target="_blank">${selectedRepo.html_url}</a></li>`;
+    reposList.innerHTML += `<li><strong>Forks:</strong> ${selectedRepo.forks_count}</li>`;
+
+    const readmeUrl = `https://api.github.com/repos/${selectedRepo.full_name}/readme`;
+    const readmeResponse = await fetch(readmeUrl);
+    const readmeData = await readmeResponse.json();
+
+    const readmeContent = atob(readmeData.content);
+    reposList.innerHTML += `<li><strong>README:</strong> <pre>${readmeContent}</pre></li>`;
+}
+
+        document.addEventListener('DOMContentLoaded', () => {
+          populateDropdown();
+        });
+      </script>
+</body>
+</html>
