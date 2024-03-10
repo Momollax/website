@@ -72,4 +72,4 @@ def writeup():
     return render_template('writeup.html')
 
 if __name__ == '__main__':
-    app.run(port=1234)
+    app.run(host='0.0.0.0', port=80)
